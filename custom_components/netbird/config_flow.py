@@ -52,6 +52,9 @@ _LOGGER = logging.getLogger(__name__)
 _TOKEN = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 _URL = TextSelector(TextSelectorConfig(type=TextSelectorType.URL))
 
+# Hassfest verbietet URLs in Übersetzungen – das Beispiel kommt als Platzhalter.
+PLACEHOLDERS = {"example_url": "https://netbird.example.com"}
+
 
 def _schema(defaults: Mapping[str, Any]) -> vol.Schema:
     return vol.Schema(
@@ -106,7 +109,10 @@ class NetBirdConfigFlow(ConfigFlow, domain=DOMAIN):
                 host = urlsplit(data[CONF_URL]).hostname or data[CONF_URL]
                 return self.async_create_entry(title=f"NetBird ({host})", data=data)
         return self.async_show_form(
-            step_id="user", data_schema=_schema(user_input or {}), errors=errors
+            step_id="user",
+            data_schema=_schema(user_input or {}),
+            errors=errors,
+            description_placeholders=PLACEHOLDERS,
         )
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
@@ -143,6 +149,7 @@ class NetBirdConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reconfigure",
             data_schema=_schema(user_input or dict(entry.data)),
             errors=errors,
+            description_placeholders=PLACEHOLDERS,
         )
 
     @staticmethod

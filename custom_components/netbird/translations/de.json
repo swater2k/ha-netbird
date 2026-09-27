@@ -10,7 +10,7 @@
           "verify_ssl": "SSL-Zertifikat prüfen"
         },
         "data_description": {
-          "url": "Basis-URL des NetBird-Dashboards, z. B. https://netbird.example.com. Ein angehängtes /api wird entfernt.",
+          "url": "Basis-URL des NetBird-Dashboards, z. B. {example_url}. Ein angehängtes /api wird entfernt.",
           "token": "Personal Access Token eines Service Users. Für reines Beobachten reicht die Rolle auditor, Steuerung braucht admin.",
           "verify_ssl": "Nur bei selbst signierten Zertifikaten ausschalten."
         }
@@ -31,7 +31,7 @@
           "verify_ssl": "SSL-Zertifikat prüfen"
         },
         "data_description": {
-          "url": "Basis-URL des NetBird-Dashboards, z. B. https://netbird.example.com. Ein angehängtes /api wird entfernt.",
+          "url": "Basis-URL des NetBird-Dashboards, z. B. {example_url}. Ein angehängtes /api wird entfernt.",
           "token": "Personal Access Token eines Service Users. Für reines Beobachten reicht die Rolle auditor, Steuerung braucht admin.",
           "verify_ssl": "Nur bei selbst signierten Zertifikaten ausschalten."
         }

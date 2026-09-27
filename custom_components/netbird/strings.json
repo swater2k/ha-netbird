@@ -10,7 +10,7 @@
           "verify_ssl": "Verify SSL certificate"
         },
         "data_description": {
-          "url": "Base URL of the NetBird dashboard, for example https://netbird.example.com. A trailing /api is removed.",
+          "url": "Base URL of the NetBird dashboard, for example {example_url}. A trailing /api is removed.",
           "token": "Personal access token of a service user. Role auditor is enough for monitoring, control needs admin.",
           "verify_ssl": "Turn off only for self-signed certificates."
         }
@@ -31,7 +31,7 @@
           "verify_ssl": "Verify SSL certificate"
         },
         "data_description": {
-          "url": "Base URL of the NetBird dashboard, for example https://netbird.example.com. A trailing /api is removed.",
+          "url": "Base URL of the NetBird dashboard, for example {example_url}. A trailing /api is removed.",
           "token": "Personal access token of a service user. Role auditor is enough for monitoring, control needs admin.",
           "verify_ssl": "Turn off only for self-signed certificates."
         }
