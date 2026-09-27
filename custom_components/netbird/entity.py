@@ -19,6 +19,18 @@ if TYPE_CHECKING:
     from . import NetBirdConfigEntry
 
 
+# HA 2026.8 ersetzt DeviceInfo["via_device"] durch "via_device_id"; ältere
+# Versionen kennen nur den alten Schlüssel.
+_HAS_VIA_DEVICE_ID = "via_device_id" in DeviceInfo.__annotations__
+
+
+def via_server(entry: NetBirdConfigEntry) -> dict[str, Any]:
+    """Verknüpfung eines Peer- oder Netzwerk-Geräts mit dem Server-Gerät."""
+    if _HAS_VIA_DEVICE_ID:
+        return {"via_device_id": entry.runtime_data.server_device_id}
+    return {"via_device": (DOMAIN, entry.entry_id)}
+
+
 def server_device(entry: NetBirdConfigEntry, data: NetBirdData | None) -> DeviceInfo:
     version = None
     if data is not None and data.version:
@@ -67,7 +79,7 @@ class NetBirdPeerEntity(CoordinatorEntity[NetBirdCoordinator]):
             manufacturer="NetBird",
             model=peer.get("os") or "Peer",
             sw_version=peer.get("version"),
-            via_device=(DOMAIN, entry.entry_id),
+            **via_server(entry),
         )
 
     @property
@@ -101,7 +113,7 @@ class NetBirdNetworkEntity(CoordinatorEntity[NetBirdCoordinator]):
             name=f"NetBird {network.get('name') or network_id}",
             manufacturer="NetBird",
             model="Network",
-            via_device=(DOMAIN, entry.entry_id),
+            **via_server(entry),
         )
 
     @property

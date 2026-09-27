@@ -7,7 +7,11 @@ from dataclasses import dataclass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL, CONF_VERIFY_SSL, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, issue_registry as ir
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    issue_registry as ir,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
@@ -36,6 +40,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 @dataclass(slots=True)
 class NetBirdRuntimeData:
     coordinator: NetBirdCoordinator
+    server_device_id: str
 
 
 type NetBirdConfigEntry = ConfigEntry[NetBirdRuntimeData]
@@ -63,7 +68,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: NetBirdConfigEntry) -> b
     )
     await coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = NetBirdRuntimeData(coordinator)
+    # Das Server-Gerät muss existieren, bevor Peers und Netzwerke darauf verweisen.
+    server = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        name="NetBird",
+        manufacturer="NetBird",
+        model="Management server",
+        entry_type=dr.DeviceEntryType.SERVICE,
+    )
+    entry.runtime_data = NetBirdRuntimeData(coordinator, server.id)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

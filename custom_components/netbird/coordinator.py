@@ -59,6 +59,15 @@ def parse_time(value: Any) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
+def find_device(
+    registry: dr.DeviceRegistry, identifier: str, entry_id: str
+) -> dr.DeviceEntry | None:
+    """Gerät dieses Eintrags suchen – mit der neuen API ab HA 2026.9, sonst der alten."""
+    if hasattr(registry, "async_get_device_by_identifier"):
+        return registry.async_get_device_by_identifier((DOMAIN, identifier), entry_id)
+    return registry.async_get_device(identifiers={(DOMAIN, identifier)})
+
+
 def peer_device_id(entry_id: str, peer_id: str) -> str:
     return f"{entry_id}_peer_{peer_id}"
 
@@ -116,20 +125,33 @@ class NetBirdData:
     def peer_connected(self, peer_id: str | None) -> bool:
         return bool(peer_id and (self.peers.get(peer_id) or {}).get("connected"))
 
+    def _router_peer_ids(self, router: dict[str, Any]) -> list[str]:
+        peer_ids = [router["peer"]] if router.get("peer") else []
+        for group in router.get("peer_groups") or []:
+            group_id = group.get("id") if isinstance(group, dict) else group
+            for member in (self.groups.get(group_id) or {}).get("peers") or []:
+                member_id = member.get("id") if isinstance(member, dict) else member
+                if member_id and member_id not in peer_ids:
+                    peer_ids.append(member_id)
+        return peer_ids
+
+    def router_peer_names(self, router: dict[str, Any]) -> list[str]:
+        return [
+            (self.peers.get(pid) or {}).get("name", pid) for pid in self._router_peer_ids(router)
+        ]
+
+    def router_group_names(self, router: dict[str, Any]) -> list[str]:
+        names = []
+        for group in router.get("peer_groups") or []:
+            group_id = group.get("id") if isinstance(group, dict) else group
+            names.append((self.groups.get(group_id) or {}).get("name", group_id))
+        return names
+
     def router_online(self, router: dict[str, Any]) -> bool:
         """Ein Router ist online, wenn er aktiv ist und mind. ein Peer verbunden."""
         if not router.get("enabled", True):
             return False
-        if self.peer_connected(router.get("peer")):
-            return True
-        for group in router.get("peer_groups") or []:
-            group_id = group.get("id") if isinstance(group, dict) else group
-            members = (self.groups.get(group_id) or {}).get("peers") or []
-            for member in members:
-                member_id = member.get("id") if isinstance(member, dict) else member
-                if self.peer_connected(member_id):
-                    return True
-        return False
+        return any(self.peer_connected(pid) for pid in self._router_peer_ids(router))
 
 
 class NetBirdCoordinator(DataUpdateCoordinator[NetBirdData]):
@@ -284,11 +306,9 @@ class NetBirdCoordinator(DataUpdateCoordinator[NetBirdData]):
 
     def _remove_device(self, identifier: str) -> None:
         registry = dr.async_get(self.hass)
-        device = registry.async_get_device(identifiers={(DOMAIN, identifier)})
+        device = find_device(registry, identifier, self.config_entry.entry_id)
         if device is not None:
-            registry.async_update_device(
-                device.id, remove_config_entry_id=self.config_entry.entry_id
-            )
+            registry.async_remove_device(device.id)
 
     def _process_audit(self, events: list[dict[str, Any]]) -> None:
         events = sorted(

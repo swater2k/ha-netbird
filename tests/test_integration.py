@@ -20,6 +20,7 @@ from custom_components.netbird.const import (
     EVENT_PEER_REMOVED,
     FEATURE_VERSION,
 )
+from custom_components.netbird.coordinator import find_device
 
 from .conftest import API, load, mock_api
 
@@ -111,10 +112,8 @@ async def test_peer_added_and_removed(hass: HomeAssistant, config_entry, aioclie
     assert hass.states.get("binary_sensor.laptop_connected") is not None
     assert hass.states.get("binary_sensor.s25_connected") is None
     devices = dr.async_get(hass)
-    assert (
-        devices.async_get_device(identifiers={(DOMAIN, f"{config_entry.entry_id}_peer_p-phone")})
-        is None
-    )
+    peer_device = f"{config_entry.entry_id}_peer_p-phone"
+    assert find_device(devices, peer_device, config_entry.entry_id) is None
 
 
 async def test_audit_events(hass: HomeAssistant, config_entry, aioclient_mock) -> None:
@@ -278,9 +277,7 @@ async def test_network_switches(hass: HomeAssistant, config_entry, aioclient_moc
 
 
 def _device_id(hass: HomeAssistant, entry, peer_id: str) -> str:
-    device = dr.async_get(hass).async_get_device(
-        identifiers={(DOMAIN, f"{entry.entry_id}_peer_{peer_id}")}
-    )
+    device = find_device(dr.async_get(hass), f"{entry.entry_id}_peer_{peer_id}", entry.entry_id)
     assert device is not None
     return device.id
 

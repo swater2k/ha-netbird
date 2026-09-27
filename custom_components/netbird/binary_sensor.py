@@ -123,7 +123,8 @@ class RoutingPeerOnline(NetBirdNetworkEntity, BinarySensorEntity):
         return {
             "routers": [
                 {
-                    "peer": (data.peers.get(r.get("peer") or "") or {}).get("name"),
+                    "peers": data.router_peer_names(r),
+                    "groups": data.router_group_names(r),
                     "enabled": r.get("enabled"),
                     "online": data.router_online(r),
                     "metric": r.get("metric"),
