@@ -1,0 +1,12 @@
+{
+  "domain": "netbird",
+  "name": "NetBird",
+  "codeowners": ["@swater2k"],
+  "config_flow": true,
+  "documentation": "https://github.com/swater2k/ha-netbird",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/swater2k/ha-netbird/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

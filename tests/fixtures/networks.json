@@ -1,0 +1,17 @@
+[
+  {
+    "id": "net-home",
+    "name": "Heimnetz",
+    "description": "",
+    "routers": [
+      "rt-1"
+    ],
+    "routing_peers_count": 1,
+    "resources": [
+      "res-lan"
+    ],
+    "policies": [
+      "pol-home"
+    ]
+  }
+]

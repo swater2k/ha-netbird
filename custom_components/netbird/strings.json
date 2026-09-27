@@ -1,0 +1,375 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "NetBird",
+        "description": "Connect a self-hosted NetBird management server.",
+        "data": {
+          "url": "Management URL",
+          "token": "Access token",
+          "verify_ssl": "Verify SSL certificate"
+        },
+        "data_description": {
+          "url": "Base URL of the NetBird dashboard, for example https://netbird.example.com. A trailing /api is removed.",
+          "token": "Personal access token of a service user. Role auditor is enough for monitoring, control needs admin.",
+          "verify_ssl": "Turn off only for self-signed certificates."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Renew access token",
+        "description": "The token for {url} is no longer valid. Create a new token for the service user and paste it here.",
+        "data": {
+          "token": "Access token"
+        }
+      },
+      "reconfigure": {
+        "title": "NetBird",
+        "description": "Change the connection settings.",
+        "data": {
+          "url": "Management URL",
+          "token": "Access token",
+          "verify_ssl": "Verify SSL certificate"
+        },
+        "data_description": {
+          "url": "Base URL of the NetBird dashboard, for example https://netbird.example.com. A trailing /api is removed.",
+          "token": "Personal access token of a service user. Role auditor is enough for monitoring, control needs admin.",
+          "verify_ssl": "Turn off only for self-signed certificates."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Server not reachable. Check the URL and the network path.",
+      "invalid_auth": "The token was rejected.",
+      "insufficient_permissions": "The token is valid, but may not read peers.",
+      "invalid_response": "The server answered, but not like a NetBird management API.",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This management server is already configured.",
+      "reauth_successful": "Token renewed.",
+      "reconfigure_successful": "Reconfiguration successful.",
+      "different_instance": "The URL belongs to a different management server."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "NetBird options",
+        "description": "Control functions are off by default. Each one needs a service user with the admin role.",
+        "data": {
+          "scan_interval": "Polling interval",
+          "token_warning_days": "Token expiry warning",
+          "audit_events": "Audit events",
+          "control_policies": "Control: policies",
+          "control_networks": "Control: networks",
+          "control_peers": "Control: peer management",
+          "control_users": "Control: user management",
+          "control_groups": "Control: group membership",
+          "control_setup_keys": "Control: setup keys"
+        },
+        "data_description": {
+          "scan_interval": "How often the management server is queried.",
+          "token_warning_days": "Create a repair issue this many days before the access token expires.",
+          "audit_events": "Fire a netbird_audit_event for every new audit log entry and add the last event sensor.",
+          "control_policies": "Adds a switch per access policy. Requires the admin role.",
+          "control_networks": "Adds switches for network resources and routing peers. Requires the admin role.",
+          "control_peers": "Allows the actions approve peer, set login expiration and delete peer.",
+          "control_users": "Allows the actions approve, reject and block user.",
+          "control_groups": "Allows the actions add and remove a peer from a group.",
+          "control_setup_keys": "Allows the actions create and revoke setup key."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connected": {
+        "name": "Connected"
+      },
+      "login_expired": {
+        "name": "Login expired"
+      },
+      "approval_required": {
+        "name": "Approval required"
+      },
+      "routing_peer_online": {
+        "name": "Routing peer online"
+      }
+    },
+    "sensor": {
+      "peers_total": {
+        "name": "Peers"
+      },
+      "peers_online": {
+        "name": "Peers online"
+      },
+      "users_total": {
+        "name": "Users"
+      },
+      "users_pending": {
+        "name": "Users awaiting approval"
+      },
+      "users_blocked": {
+        "name": "Blocked users"
+      },
+      "token_expiration": {
+        "name": "Token expiration"
+      },
+      "setup_keys_valid": {
+        "name": "Valid setup keys"
+      },
+      "last_audit_event": {
+        "name": "Last audit event"
+      },
+      "last_seen": {
+        "name": "Last seen"
+      },
+      "ip": {
+        "name": "NetBird IP"
+      },
+      "client_version": {
+        "name": "Client version"
+      },
+      "os": {
+        "name": "Operating system"
+      },
+      "connection_ip": {
+        "name": "Connection IP"
+      },
+      "location": {
+        "name": "Location"
+      },
+      "last_login": {
+        "name": "Last login"
+      },
+      "group_peers": {
+        "name": "Group {name}"
+      },
+      "setup_key": {
+        "name": "Setup key {name}",
+        "state": {
+          "valid": "Valid",
+          "expired": "Expired",
+          "revoked": "Revoked",
+          "overused": "Used up"
+        }
+      },
+      "network_resources": {
+        "name": "Resources"
+      }
+    },
+    "switch": {
+      "policy": {
+        "name": "Policy {name}"
+      },
+      "resource": {
+        "name": "Resource {name}"
+      },
+      "router": {
+        "name": "Routing peer {name}"
+      }
+    },
+    "update": {
+      "management": {
+        "name": "Management server"
+      }
+    }
+  },
+  "issues": {
+    "token_expiring": {
+      "title": "NetBird token expires soon",
+      "description": "The access token used by {title} expires on {date}. Create a new token for the service user in the NetBird dashboard and enter it via Reconfigure."
+    },
+    "missing_permissions": {
+      "title": "NetBird control needs more permissions",
+      "description": "Control functions are enabled for {title}, but the service user may not change: {modules}. Give the service user the admin role or turn these options off."
+    }
+  },
+  "exceptions": {
+    "control_disabled": {
+      "message": "This action is turned off in the options of {title}."
+    },
+    "entry_not_found": {
+      "message": "NetBird entry not found or not loaded."
+    },
+    "entry_ambiguous": {
+      "message": "Several NetBird servers are configured, choose one."
+    },
+    "peer_not_found": {
+      "message": "The device is not a known NetBird peer."
+    },
+    "user_not_found": {
+      "message": "User {user} not found."
+    },
+    "group_not_found": {
+      "message": "Group {group} not found."
+    },
+    "setup_key_not_found": {
+      "message": "Setup key {name} not found."
+    },
+    "permission_denied": {
+      "message": "The service user lacks permission for this action (role admin required)."
+    },
+    "cannot_block_self": {
+      "message": "The service user used by this integration cannot block itself."
+    }
+  },
+  "services": {
+    "approve_peer": {
+      "name": "Approve peer",
+      "description": "Approves a peer that is waiting for approval.",
+      "fields": {
+        "device_id": {
+          "name": "Peer",
+          "description": "NetBird peer device."
+        }
+      }
+    },
+    "set_login_expiration": {
+      "name": "Set login expiration",
+      "description": "Turns login expiration of a peer on or off.",
+      "fields": {
+        "device_id": {
+          "name": "Peer",
+          "description": "NetBird peer device."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Whether the login of this peer expires."
+        }
+      }
+    },
+    "delete_peer": {
+      "name": "Delete peer",
+      "description": "Removes a peer from NetBird. It has to register again.",
+      "fields": {
+        "device_id": {
+          "name": "Peer",
+          "description": "NetBird peer device."
+        }
+      }
+    },
+    "approve_user": {
+      "name": "Approve user",
+      "description": "Approves a user waiting for approval.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird server",
+          "description": "Only needed if several servers are configured."
+        },
+        "user": {
+          "name": "User",
+          "description": "E-mail, name or ID."
+        }
+      }
+    },
+    "reject_user": {
+      "name": "Reject user",
+      "description": "Rejects and removes a user waiting for approval.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird server",
+          "description": "Only needed if several servers are configured."
+        },
+        "user": {
+          "name": "User",
+          "description": "E-mail, name or ID."
+        }
+      }
+    },
+    "block_user": {
+      "name": "Block user",
+      "description": "Blocks or unblocks a user. Blocked users lose access with all their peers.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird server",
+          "description": "Only needed if several servers are configured."
+        },
+        "user": {
+          "name": "User",
+          "description": "E-mail, name or ID."
+        },
+        "blocked": {
+          "name": "Blocked",
+          "description": "On blocks, off unblocks."
+        }
+      }
+    },
+    "add_peer_to_group": {
+      "name": "Add peer to group",
+      "description": "Adds a peer to a group, for example to grant access through a policy.",
+      "fields": {
+        "device_id": {
+          "name": "Peer",
+          "description": "NetBird peer device."
+        },
+        "group": {
+          "name": "Group",
+          "description": "Group name or ID."
+        }
+      }
+    },
+    "remove_peer_from_group": {
+      "name": "Remove peer from group",
+      "description": "Removes a peer from a group.",
+      "fields": {
+        "device_id": {
+          "name": "Peer",
+          "description": "NetBird peer device."
+        },
+        "group": {
+          "name": "Group",
+          "description": "Group name or ID."
+        }
+      }
+    },
+    "create_setup_key": {
+      "name": "Create setup key",
+      "description": "Creates a setup key and returns it in the response.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird server",
+          "description": "Only needed if several servers are configured."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Name of the key."
+        },
+        "reusable": {
+          "name": "Reusable",
+          "description": "Off creates a one-off key."
+        },
+        "expires_days": {
+          "name": "Valid for",
+          "description": "Days until the key expires."
+        },
+        "auto_groups": {
+          "name": "Auto groups",
+          "description": "Groups new peers are added to."
+        },
+        "usage_limit": {
+          "name": "Usage limit",
+          "description": "0 means unlimited for reusable keys."
+        },
+        "ephemeral": {
+          "name": "Ephemeral",
+          "description": "Peers are removed automatically after being offline for a while."
+        }
+      }
+    },
+    "revoke_setup_key": {
+      "name": "Revoke setup key",
+      "description": "Revokes a setup key.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird server",
+          "description": "Only needed if several servers are configured."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Name or ID of the key."
+        }
+      }
+    }
+  }
+}

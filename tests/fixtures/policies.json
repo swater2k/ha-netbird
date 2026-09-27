@@ -1,0 +1,71 @@
+[
+  {
+    "id": "pol-home",
+    "name": "Heimnetz-AdressBlock Access",
+    "description": "",
+    "enabled": true,
+    "source_posture_checks": [],
+    "rules": [
+      {
+        "id": "rule-1",
+        "name": "Heimnetz-AdressBlock Access",
+        "description": "",
+        "enabled": true,
+        "action": "accept",
+        "bidirectional": false,
+        "protocol": "all",
+        "ports": [],
+        "sources": [
+          {
+            "id": "g-dev",
+            "name": "geraete",
+            "peers_count": 1,
+            "resources_count": 0,
+            "issued": "api"
+          }
+        ],
+        "destinations": null,
+        "destinationResource": {
+          "id": "res-lan",
+          "type": "subnet"
+        }
+      }
+    ]
+  },
+  {
+    "id": "pol-default",
+    "name": "Default",
+    "description": "This is a default rule",
+    "enabled": false,
+    "source_posture_checks": [],
+    "rules": [
+      {
+        "id": "rule-d",
+        "name": "Default",
+        "description": "",
+        "enabled": true,
+        "action": "accept",
+        "bidirectional": true,
+        "protocol": "all",
+        "sources": [
+          {
+            "id": "g-all",
+            "name": "All",
+            "peers_count": 2,
+            "resources_count": 0,
+            "issued": "api"
+          }
+        ],
+        "destinations": [
+          {
+            "id": "g-all",
+            "name": "All",
+            "peers_count": 2,
+            "resources_count": 0,
+            "issued": "api"
+          }
+        ]
+      }
+    ]
+  }
+]

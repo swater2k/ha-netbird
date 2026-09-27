@@ -1,0 +1,90 @@
+[
+  {
+    "id": "p-router",
+    "name": "netbird-router",
+    "ip": "100.105.196.120",
+    "connection_ip": "192.0.2.10",
+    "connected": true,
+    "last_seen": "2026-09-26T08:00:00Z",
+    "os": "Debian GNU/Linux 13",
+    "kernel_version": "6.8",
+    "geoname_id": 0,
+    "version": "0.79.0",
+    "groups": [
+      {
+        "id": "g-all",
+        "name": "All",
+        "peers_count": 2,
+        "resources_count": 0,
+        "issued": "api"
+      },
+      {
+        "id": "g-rp",
+        "name": "routing-peers",
+        "peers_count": 1,
+        "resources_count": 0,
+        "issued": "api"
+      }
+    ],
+    "ssh_enabled": false,
+    "user_id": "u-admin",
+    "hostname": "netbird-router",
+    "ui_version": "",
+    "dns_label": "netbird-router.netbird.selfhosted",
+    "login_expiration_enabled": false,
+    "login_expired": false,
+    "last_login": "2026-09-25T10:00:00Z",
+    "inactivity_expiration_enabled": false,
+    "approval_required": false,
+    "country_code": "DE",
+    "city_name": "K\u00f6ln",
+    "serial_number": "",
+    "extra_dns_labels": [],
+    "ephemeral": false,
+    "created_at": "2026-09-25T10:00:00Z"
+  },
+  {
+    "id": "p-phone",
+    "name": "s25+",
+    "ip": "100.105.100.207",
+    "connection_ip": "198.51.100.7",
+    "connected": false,
+    "last_seen": "2026-09-26T07:30:00Z",
+    "os": "Android 16",
+    "kernel_version": "",
+    "geoname_id": 0,
+    "version": "0.78.0",
+    "groups": [
+      {
+        "id": "g-all",
+        "name": "All",
+        "peers_count": 2,
+        "resources_count": 0,
+        "issued": "api"
+      },
+      {
+        "id": "g-dev",
+        "name": "geraete",
+        "peers_count": 1,
+        "resources_count": 0,
+        "issued": "api"
+      }
+    ],
+    "ssh_enabled": false,
+    "user_id": "u-michael",
+    "hostname": "s25-",
+    "ui_version": "",
+    "dns_label": "s25-.netbird.selfhosted",
+    "login_expiration_enabled": true,
+    "login_expired": false,
+    "last_login": "2026-09-25T12:00:00Z",
+    "inactivity_expiration_enabled": false,
+    "approval_required": false,
+    "country_code": "DE",
+    "city_name": "K\u00f6ln",
+    "serial_number": "",
+    "extra_dns_labels": [],
+    "ephemeral": false,
+    "created_at": "2026-09-25T12:00:00Z"
+  }
+]

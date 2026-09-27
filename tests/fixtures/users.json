@@ -1,0 +1,43 @@
+[
+  {
+    "id": "u-michael",
+    "email": "michael@example.com",
+    "name": "Michael",
+    "role": "admin",
+    "status": "active",
+    "auto_groups": [
+      "g-dev"
+    ],
+    "is_current": false,
+    "is_service_user": false,
+    "is_blocked": false,
+    "pending_approval": false,
+    "issued": "api"
+  },
+  {
+    "id": "u-pending",
+    "email": "new@example.com",
+    "name": "New",
+    "role": "user",
+    "status": "invited",
+    "auto_groups": [],
+    "is_current": false,
+    "is_service_user": false,
+    "is_blocked": false,
+    "pending_approval": true,
+    "issued": "api"
+  },
+  {
+    "id": "u-svc",
+    "email": "",
+    "name": "homeassistant",
+    "role": "admin",
+    "status": "active",
+    "auto_groups": [],
+    "is_current": true,
+    "is_service_user": true,
+    "is_blocked": false,
+    "pending_approval": false,
+    "issued": "api"
+  }
+]

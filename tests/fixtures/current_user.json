@@ -1,0 +1,66 @@
+{
+  "id": "u-svc",
+  "email": "",
+  "name": "homeassistant",
+  "role": "admin",
+  "status": "active",
+  "auto_groups": [],
+  "is_current": true,
+  "is_service_user": true,
+  "is_blocked": false,
+  "pending_approval": false,
+  "issued": "api",
+  "permissions": {
+    "is_restricted": false,
+    "modules": {
+      "peers": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "groups": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "policies": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "networks": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "users": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "setup_keys": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "events": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "pats": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      }
+    }
+  }
+}

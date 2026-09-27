@@ -1,0 +1,145 @@
+approve_peer:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: netbird
+
+set_login_expiration:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: netbird
+    enabled:
+      required: true
+      selector:
+        boolean:
+
+delete_peer:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: netbird
+
+approve_user:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: netbird
+    user:
+      required: true
+      example: "jane@example.com"
+      selector:
+        text:
+
+reject_user:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: netbird
+    user:
+      required: true
+      example: "jane@example.com"
+      selector:
+        text:
+
+block_user:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: netbird
+    user:
+      required: true
+      example: "jane@example.com"
+      selector:
+        text:
+    blocked:
+      required: true
+      selector:
+        boolean:
+
+add_peer_to_group:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: netbird
+    group:
+      required: true
+      example: "geraete"
+      selector:
+        text:
+
+remove_peer_from_group:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: netbird
+    group:
+      required: true
+      example: "geraete"
+      selector:
+        text:
+
+create_setup_key:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: netbird
+    name:
+      required: true
+      example: "laptop-onboarding"
+      selector:
+        text:
+    reusable:
+      default: false
+      selector:
+        boolean:
+    expires_days:
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 365
+          mode: box
+          unit_of_measurement: d
+    auto_groups:
+      example: "geraete"
+      selector:
+        text:
+          multiple: true
+    usage_limit:
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 1000
+          mode: box
+    ephemeral:
+      default: false
+      selector:
+        boolean:
+
+revoke_setup_key:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: netbird
+    name:
+      required: true
+      example: "laptop-onboarding"
+      selector:
+        text:

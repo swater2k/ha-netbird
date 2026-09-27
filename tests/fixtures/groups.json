@@ -1,0 +1,48 @@
+[
+  {
+    "id": "g-all",
+    "name": "All",
+    "peers_count": 2,
+    "resources_count": 0,
+    "issued": "api",
+    "peers": [
+      {
+        "id": "p-router",
+        "name": "netbird-router"
+      },
+      {
+        "id": "p-phone",
+        "name": "s25+"
+      }
+    ],
+    "resources": []
+  },
+  {
+    "id": "g-rp",
+    "name": "routing-peers",
+    "peers_count": 1,
+    "resources_count": 0,
+    "issued": "api",
+    "peers": [
+      {
+        "id": "p-router",
+        "name": "netbird-router"
+      }
+    ],
+    "resources": []
+  },
+  {
+    "id": "g-dev",
+    "name": "geraete",
+    "peers_count": 1,
+    "resources_count": 0,
+    "issued": "api",
+    "peers": [
+      {
+        "id": "p-phone",
+        "name": "s25+"
+      }
+    ],
+    "resources": []
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "res-lan",
+    "type": "subnet",
+    "groups": [
+      {
+        "id": "g-lan",
+        "name": "lan",
+        "peers_count": 0,
+        "resources_count": 1
+      }
+    ],
+    "name": "Heimnetz-AdressBlock",
+    "description": "",
+    "address": "192.168.178.0/24",
+    "enabled": true
+  }
+]

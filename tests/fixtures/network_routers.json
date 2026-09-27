@@ -1,0 +1,12 @@
+[
+  {
+    "id": "rt-1",
+    "peer": "",
+    "peer_groups": [
+      "g-rp"
+    ],
+    "metric": 9999,
+    "masquerade": true,
+    "enabled": true
+  }
+]

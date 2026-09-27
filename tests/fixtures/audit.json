@@ -1,0 +1,28 @@
+[
+  {
+    "id": "1",
+    "timestamp": "2026-09-25T10:00:00Z",
+    "activity": "Peer added",
+    "activity_code": "peer.user.add",
+    "initiator_id": "u-michael",
+    "initiator_name": "Michael",
+    "initiator_email": "michael@example.com",
+    "target_id": "p-router",
+    "meta": {
+      "name": "netbird-router"
+    }
+  },
+  {
+    "id": "2",
+    "timestamp": "2026-09-26T07:00:00Z",
+    "activity": "Policy updated",
+    "activity_code": "policy.update",
+    "initiator_id": "u-michael",
+    "initiator_name": "Michael",
+    "initiator_email": "michael@example.com",
+    "target_id": "pol-home",
+    "meta": {
+      "name": "Heimnetz-AdressBlock Access"
+    }
+  }
+]
