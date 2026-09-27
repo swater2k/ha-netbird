@@ -51,7 +51,10 @@ def mock_api(
     """Registriert alle Lese-Endpunkte; ``overrides`` ersetzt Antworten."""
     aioclient_mock.clear_requests()
     overrides = overrides or {}
-    status = status or {}
+    # Wie auf einem echten Server: Service User bekommen auf /users/current 403.
+    status = {"/users/current": 403} | (status or {})
+    if "/users/current" in overrides:
+        status.pop("/users/current")
     for path, fixture in ENDPOINTS.items():
         if path in status:
             aioclient_mock.get(f"{API}{path}", status=status[path])

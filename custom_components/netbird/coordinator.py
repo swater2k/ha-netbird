@@ -45,6 +45,9 @@ _LOGGER = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
+FULL_ACCESS_ROLES = frozenset({"owner", "admin"})
+READ_ONLY_ROLES = frozenset({"auditor", "user", "usage_viewer", "billing_admin"})
+
 
 def parse_time(value: Any) -> datetime | None:
     """NetBird liefert RFC3339; Nullwerte kommen als ``0001-01-01…``."""
@@ -87,7 +90,22 @@ class NetBirdData:
 
     @property
     def permissions(self) -> dict[str, dict[str, bool]]:
-        return (self.current_user.get("permissions") or {}).get("modules") or {}
+        """Rechte je Modul; fehlen sie in der Antwort, werden sie aus der Rolle abgeleitet."""
+        modules = (self.current_user.get("permissions") or {}).get("modules")
+        if modules:
+            return modules
+        role = self.current_user.get("role")
+        if role in FULL_ACCESS_ROLES:
+            allowed = True
+        elif role in READ_ONLY_ROLES:
+            allowed = False
+        else:
+            # Unbekannte oder gemischte Rolle: lieber nicht falsch warnen.
+            return {}
+        return {
+            module: {"read": True, "create": allowed, "update": allowed, "delete": allowed}
+            for module in CONTROL_MODULES.values()
+        }
 
     @property
     def token_expiration(self) -> datetime | None:
@@ -164,15 +182,20 @@ class NetBirdCoordinator(DataUpdateCoordinator[NetBirdData]):
                 self.client.groups(),
                 self.client.policies(),
             )
-            # Ohne eigenen Benutzer fehlen nur Rechteprüfung und Token-Ablauf.
-            try:
-                current_user = await self.client.current_user()
-            except (NetBirdNotFoundError, NetBirdPermissionError):
-                current_user = {}
             try:
                 users = await self.client.users()
             except NetBirdPermissionError:
                 users = []
+            # Die Benutzerliste markiert den Token-Inhaber mit is_current.
+            # /users/current lehnt Service User mit 403 ab und dient nur als
+            # Rückfall für Tokens normaler Benutzer. Ohne eigenen Benutzer
+            # fehlen lediglich Rechteprüfung und Token-Ablauf.
+            current_user = next((u for u in users if u.get("is_current")), None)
+            if current_user is None:
+                try:
+                    current_user = await self.client.current_user()
+                except (NetBirdNotFoundError, NetBirdPermissionError):
+                    current_user = {}
             version, networks, setup_keys = await asyncio.gather(
                 self._optional(FEATURE_VERSION, self.client.instance_version()),
                 self._optional(FEATURE_NETWORKS, self._fetch_networks()),

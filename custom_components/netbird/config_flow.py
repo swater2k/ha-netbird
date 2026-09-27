@@ -80,7 +80,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     """Verbindung und Token testen; leeres Dict bedeutet Erfolg."""
     client = build_client(hass, data)
     try:
-        await client.current_user()
+        # Nur Peers prüfen: /users/current lehnt Service User grundsätzlich ab.
         await client.peers()
     except NetBirdAuthError:
         return {"base": "invalid_auth"}

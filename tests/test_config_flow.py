@@ -37,7 +37,7 @@ async def test_user_flow(hass: HomeAssistant, aioclient_mock) -> None:
     [(401, "invalid_auth"), (403, "insufficient_permissions"), (500, "invalid_response")],
 )
 async def test_user_flow_errors(hass: HomeAssistant, aioclient_mock, status, error) -> None:
-    mock_api(aioclient_mock, status={"/users/current": status})
+    mock_api(aioclient_mock, status={"/peers": status})
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )

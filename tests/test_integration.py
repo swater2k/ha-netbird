@@ -168,7 +168,7 @@ async def test_optional_endpoint_missing(hass: HomeAssistant, config_entry, aioc
 async def test_auth_failure_starts_reauth(
     hass: HomeAssistant, config_entry, aioclient_mock
 ) -> None:
-    mock_api(aioclient_mock, status={"/users/current": 401})
+    mock_api(aioclient_mock, status={"/peers": 401})
     config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
@@ -192,15 +192,30 @@ async def test_token_expiring_issue(hass: HomeAssistant, config_entry, aioclient
 
 @pytest.mark.parametrize("options", [{"control_policies": True}])
 async def test_missing_permissions_issue(hass: HomeAssistant, config_entry, aioclient_mock) -> None:
-    user = load("current_user")
-    user["permissions"]["modules"]["policies"]["update"] = False
-    mock_api(aioclient_mock, {"/users/current": user})
+    users = load("users")
+    users[2]["role"] = "auditor"  # der Service User aus der Benutzerliste
+    mock_api(aioclient_mock, {"/users": users})
     await _setup(hass, config_entry)
     issue = ir.async_get(hass).async_get_issue(
         DOMAIN, f"missing_permissions_{config_entry.entry_id}"
     )
     assert issue is not None
     assert issue.translation_placeholders["modules"] == "policies"
+
+
+@pytest.mark.parametrize("options", [{"control_policies": True}])
+async def test_permissions_from_current_user(
+    hass: HomeAssistant, config_entry, aioclient_mock
+) -> None:
+    """Token eines normalen Benutzers: Rechte kommen direkt aus /users/current."""
+    users = [u for u in load("users") if not u["is_service_user"]]
+    user = load("current_user")
+    user["permissions"]["modules"]["policies"]["update"] = False
+    mock_api(aioclient_mock, {"/users": users, "/users/current": user})
+    await _setup(hass, config_entry)
+    assert ir.async_get(hass).async_get_issue(
+        DOMAIN, f"missing_permissions_{config_entry.entry_id}"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -368,7 +383,8 @@ async def test_older_server(hass: HomeAssistant, config_entry, aioclient_mock) -
     peers = load("peers")
     for peer in peers:
         peer.pop("approval_required")
-    mock_api(aioclient_mock, {"/peers": peers}, status={"/users/current": 404})
+    users = [dict(u, is_current=False) for u in load("users")]
+    mock_api(aioclient_mock, {"/peers": peers, "/users": users}, status={"/users/current": 404})
     await _setup(hass, config_entry)
     assert config_entry.state is ConfigEntryState.LOADED
     assert hass.states.get("binary_sensor.s25_connected") is not None
