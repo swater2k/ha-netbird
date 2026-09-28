@@ -146,6 +146,18 @@ class NetBirdClient:
     async def audit_events(self) -> list[dict[str, Any]]:
         return await self._request("GET", "/events/audit") or []
 
+    async def nameserver_groups(self) -> list[dict[str, Any]]:
+        return await self._request("GET", "/dns/nameservers") or []
+
+    async def dns_zones(self) -> list[dict[str, Any]]:
+        return await self._request("GET", "/dns/zones") or []
+
+    async def reverse_proxy_services(self) -> list[dict[str, Any]]:
+        return await self._request("GET", "/reverse-proxies/services") or []
+
+    async def accessible_peers(self, peer_id: str) -> list[dict[str, Any]]:
+        return await self._request("GET", f"/peers/{peer_id}/accessible-peers") or []
+
     # --- Schreiben ---------------------------------------------------------- #
 
     async def set_policy_enabled(self, policy_id: str, enabled: bool) -> dict[str, Any]:
@@ -252,6 +264,42 @@ class NetBirdClient:
                 if isinstance(res, dict) and res.get("id")
             ]
         return await self._request("PUT", f"/groups/{group_id}", payload)
+
+    async def set_nameserver_group_enabled(
+        self, group: dict[str, Any], enabled: bool
+    ) -> dict[str, Any]:
+        payload = {
+            "name": group["name"],
+            "description": group.get("description", ""),
+            "nameservers": group.get("nameservers") or [],
+            "enabled": enabled,
+            "groups": ids(group.get("groups")),
+            "primary": group.get("primary", False),
+            "domains": group.get("domains") or [],
+            "search_domains_enabled": group.get("search_domains_enabled", False),
+        }
+        return await self._request("PUT", f"/dns/nameservers/{group['id']}", payload)
+
+    async def set_zone_enabled(self, zone: dict[str, Any], enabled: bool) -> dict[str, Any]:
+        payload = {
+            "name": zone["name"],
+            "domain": zone["domain"],
+            "enabled": enabled,
+            "enable_search_domain": zone.get("enable_search_domain", False),
+            "distribution_groups": ids(zone.get("distribution_groups")),
+        }
+        return await self._request("PUT", f"/dns/zones/{zone['id']}", payload)
+
+    async def create_dns_record(self, zone_id: str, record: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", f"/dns/zones/{zone_id}/records", record)
+
+    async def update_dns_record(
+        self, zone_id: str, record_id: str, record: dict[str, Any]
+    ) -> dict[str, Any]:
+        return await self._request("PUT", f"/dns/zones/{zone_id}/records/{record_id}", record)
+
+    async def delete_dns_record(self, zone_id: str, record_id: str) -> None:
+        await self._request("DELETE", f"/dns/zones/{zone_id}/records/{record_id}")
 
     async def create_setup_key(self, payload: dict[str, Any]) -> dict[str, Any]:
         return await self._request("POST", "/setup-keys", payload)

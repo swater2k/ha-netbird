@@ -23,7 +23,10 @@ It talks to the documented NetBird REST API with the personal access token of a 
 - **Server**: peers online, users awaiting approval, blocked users, valid setup keys, peers per group, management server update
 - **Security**: every new audit log entry becomes a Home Assistant event, peers joining or leaving fire their own events
 - **Token expiry**: a repair issue appears before the integration's own access token runs out
-- **Optional control**: switches for policies, network resources and routing peers, actions for peers, users, groups and setup keys — each one turned on separately
+- **DNS**: nameserver groups and custom DNS zones with their records
+- **Reverse proxy**: status of services published through NetBird's reverse proxy (read-only)
+- **Optional control**: switches for policies, network resources, routing peers, nameserver groups and DNS zones, actions for peers, users, groups, setup keys and DNS records — each one turned on separately
+- **Stable entity IDs**: new entities are named after the device and entity only, never after the area the device is assigned to
 - Endpoints missing on older servers are skipped instead of breaking the integration
 
 ## Requirements
@@ -66,14 +69,16 @@ The connection and the token are checked before saving. An invalid token later o
 | Polling interval | `60 s` | How often the server is queried (15–900 s) |
 | Token expiry warning | `14 d` | Days before expiry the repair issue appears |
 | Audit events | on | Fires `netbird_audit_event` and adds the last audit event sensor |
+| Accessible peers per peer | off | Adds a sensor per peer with the number of peers it may reach; one extra request per peer and poll |
 | Control: policies | off | One switch per access policy |
 | Control: networks | off | Switches for network resources and routing peers |
 | Control: peer management | off | Actions approve peer, set login expiration, delete peer |
 | Control: user management | off | Actions approve, reject and block user |
 | Control: group membership | off | Actions add and remove a peer from a group |
 | Control: setup keys | off | Actions create and revoke setup key |
+| Control: DNS | off | Switches for nameserver groups and DNS zones, actions set and delete DNS record |
 
-If a control function is on but the service user may not change that area, a repair issue names the missing permissions.
+If a control function is on but the service user may not change that area, a repair issue names the missing permissions. Turning an option off removes the entities it added; binary sensors replaced by switches come back.
 
 ## Entities
 
@@ -91,6 +96,10 @@ Entities marked ✗ are disabled by default and can be enabled in the entity set
 | Last audit event | sensor | ✓ |
 | Token expiration | sensor (timestamp, diagnostic) | ✓ |
 | Management server | update | ✓ |
+| Nameserver *name* — nameservers, domains and groups as attributes | binary sensor (diagnostic), switch with control option | ✓ |
+| DNS zone *name* | binary sensor (diagnostic), switch with control option | ✓ |
+| DNS zone *name* records — records as attribute | sensor | ✓ |
+| Reverse proxy *name*, reverse proxy *name* status | binary sensor, sensor | ✓ |
 
 ### Per peer
 
@@ -102,6 +111,7 @@ Entities marked ✗ are disabled by default and can be enabled in the entity set
 | Last seen | sensor (timestamp) | ✓ |
 | NetBird IP, client version, operating system | sensor (diagnostic) | ✓ |
 | Connection IP, location, last login | sensor (diagnostic) | ✗ |
+| Accessible peers | sensor (diagnostic) | only with option |
 
 ### Per network
 
@@ -154,6 +164,8 @@ Each group of actions only works if its control option is turned on. The NetBird
 | `netbird.add_peer_to_group` / `netbird.remove_peer_from_group` | group membership | Change group membership, for example to grant access through a policy |
 | `netbird.create_setup_key` | setup keys | Create a setup key; the key is returned in the response |
 | `netbird.revoke_setup_key` | setup keys | Revoke a setup key by name or ID |
+| `netbird.set_dns_record` | DNS | Create or update an A, AAAA or CNAME record in a DNS zone; short names get the zone domain appended |
+| `netbird.delete_dns_record` | DNS | Delete records with a name, optionally only of one type |
 
 ```yaml
 action: netbird.create_setup_key
@@ -164,6 +176,8 @@ data:
     - devices
 response_variable: setup_key
 ```
+
+Reverse proxy services are read-only on purpose: the API does not return their authentication secrets, so writing a service back could remove them.
 
 ## Removal
 

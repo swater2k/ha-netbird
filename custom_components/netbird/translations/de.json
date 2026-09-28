@@ -65,6 +65,8 @@
           "control_peers": "Steuerung: Peer-Verwaltung",
           "control_users": "Steuerung: Benutzerverwaltung",
           "control_groups": "Steuerung: Gruppenmitgliedschaft",
+          "control_dns": "Steuerung: DNS",
+          "accessible_peers": "Erreichbare Peers je Peer",
           "control_setup_keys": "Steuerung: Setup-Keys"
         },
         "data_description": {
@@ -76,6 +78,8 @@
           "control_peers": "Erlaubt die Aktionen Peer freigeben, Login-Ablauf setzen und Peer löschen.",
           "control_users": "Erlaubt die Aktionen Benutzer freigeben, ablehnen und sperren.",
           "control_groups": "Erlaubt die Aktionen Peer zu Gruppe hinzufügen und entfernen.",
+          "control_dns": "Legt Schalter für Nameserver-Gruppen und DNS-Zonen an und erlaubt die Aktionen DNS-Eintrag setzen und löschen.",
+          "accessible_peers": "Legt je Peer einen Sensor mit der Anzahl erreichbarer Peers an. Kostet je Peer und Abfrage eine zusätzliche Anfrage.",
           "control_setup_keys": "Erlaubt die Aktionen Setup-Key erzeugen und widerrufen."
         }
       }
@@ -94,6 +98,15 @@
       },
       "routing_peer_online": {
         "name": "Routing-Peer online"
+      },
+      "nameserver": {
+        "name": "Nameserver {name}"
+      },
+      "zone": {
+        "name": "DNS-Zone {name}"
+      },
+      "service": {
+        "name": "Reverse Proxy {name}"
       }
     },
     "sensor": {
@@ -156,6 +169,23 @@
       },
       "network_resources": {
         "name": "Resources"
+      },
+      "zone_records": {
+        "name": "DNS-Zone {name} Einträge"
+      },
+      "service_status": {
+        "name": "Reverse Proxy {name} Status",
+        "state": {
+          "pending": "Ausstehend",
+          "active": "Aktiv",
+          "tunnel_not_created": "Tunnel nicht erstellt",
+          "certificate_pending": "Zertifikat ausstehend",
+          "certificate_failed": "Zertifikat fehlgeschlagen",
+          "error": "Fehler"
+        }
+      },
+      "accessible_peers": {
+        "name": "Erreichbare Peers"
       }
     },
     "switch": {
@@ -167,6 +197,12 @@
       },
       "router": {
         "name": "Routing-Peer {name}"
+      },
+      "nameserver": {
+        "name": "Nameserver {name}"
+      },
+      "zone": {
+        "name": "DNS-Zone {name}"
       }
     },
     "update": {
@@ -209,6 +245,12 @@
     },
     "permission_denied": {
       "message": "Der Service User darf diese Aktion nicht ausführen (Rolle admin nötig)."
+    },
+    "zone_not_found": {
+      "message": "DNS-Zone {zone} nicht gefunden."
+    },
+    "record_not_found": {
+      "message": "Kein DNS-Eintrag {name} gefunden."
     },
     "cannot_block_self": {
       "message": "Der Service User dieser Integration kann sich nicht selbst sperren."
@@ -354,6 +396,58 @@
         "ephemeral": {
           "name": "Flüchtig",
           "description": "Peers werden nach einer Weile offline automatisch entfernt."
+        }
+      }
+    },
+    "set_dns_record": {
+      "name": "DNS-Eintrag setzen",
+      "description": "Legt einen Eintrag in einer NetBird-DNS-Zone an oder aktualisiert den mit gleichem Namen und Typ.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird-Server",
+          "description": "Nur nötig, wenn mehrere Server eingerichtet sind."
+        },
+        "zone": {
+          "name": "Zone",
+          "description": "Name, Domain oder ID der Zone."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Hostname; die Domain der Zone wird bei Bedarf angehängt."
+        },
+        "type": {
+          "name": "Typ",
+          "description": "A, AAAA oder CNAME."
+        },
+        "content": {
+          "name": "Inhalt",
+          "description": "IP-Adresse oder Zielname."
+        },
+        "ttl": {
+          "name": "TTL",
+          "description": "Gültigkeit in Sekunden."
+        }
+      }
+    },
+    "delete_dns_record": {
+      "name": "DNS-Eintrag löschen",
+      "description": "Löscht Einträge mit diesem Namen aus einer NetBird-DNS-Zone.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird-Server",
+          "description": "Nur nötig, wenn mehrere Server eingerichtet sind."
+        },
+        "zone": {
+          "name": "Zone",
+          "description": "Name, Domain oder ID der Zone."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Hostname; die Domain der Zone wird bei Bedarf angehängt."
+        },
+        "type": {
+          "name": "Typ",
+          "description": "Nur Einträge dieses Typs löschen; leer löscht alle Typen."
         }
       }
     },

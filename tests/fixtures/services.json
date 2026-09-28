@@ -1,0 +1,14 @@
+[
+  {
+    "id": "svc-1",
+    "name": "Wiki",
+    "domain": "wiki.example.com",
+    "enabled": true,
+    "targets": [],
+    "auth": {},
+    "meta": {
+      "created_at": "2026-09-20T10:00:00Z",
+      "status": "active"
+    }
+  }
+]

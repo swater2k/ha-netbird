@@ -11,7 +11,8 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import NetBirdConfigEntry, option_enabled
 from .api import NetBirdError, NetBirdPermissionError
-from .const import CONF_CONTROL_NETWORKS, CONF_CONTROL_POLICIES
+from .binary_sensor import dns_attributes, dns_items
+from .const import CONF_CONTROL_DNS, CONF_CONTROL_NETWORKS, CONF_CONTROL_POLICIES
 from .coordinator import NetBirdCoordinator
 from .entity import NetBirdEntity, NetBirdNetworkEntity, track_items
 
@@ -48,6 +49,22 @@ async def async_setup_entry(
             async_add_entities,
             lambda d: (f"{nid}/p/{r['id']}" for nid, n in d.networks.items() for r in n.routers),
             lambda item: [RouterSwitch(coordinator, entry, *_split(item))],
+        )
+
+    if option_enabled(entry, CONF_CONTROL_DNS):
+        track_items(
+            coordinator,
+            entry,
+            async_add_entities,
+            lambda d: d.nameservers.keys(),
+            lambda group_id: [DnsItemSwitch(coordinator, entry, "nameserver", group_id)],
+        )
+        track_items(
+            coordinator,
+            entry,
+            async_add_entities,
+            lambda d: d.zones.keys(),
+            lambda zone_id: [DnsItemSwitch(coordinator, entry, "zone", zone_id)],
         )
 
 
@@ -193,6 +210,55 @@ class RouterSwitch(_NetworkItemSwitch):
             self.coordinator,
             self.coordinator.client.set_router_enabled(self.network_id, item, enabled),
         )
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set(False)
+
+
+class DnsItemSwitch(NetBirdEntity, SwitchEntity):
+    """Nameserver-Gruppe oder DNS-Zone ein- und ausschalten."""
+
+    def __init__(
+        self, coordinator: NetBirdCoordinator, entry: NetBirdConfigEntry, kind: str, item_id: str
+    ) -> None:
+        super().__init__(coordinator, entry, f"{kind}_{item_id}_switch")
+        self.kind = kind
+        self.item_id = item_id
+        self._attr_translation_key = kind
+        self._attr_translation_placeholders = {
+            "name": dns_items(coordinator, kind).get(item_id, {}).get("name", item_id)
+        }
+
+    @property
+    def _item(self) -> dict[str, Any] | None:
+        return dns_items(self.coordinator, self.kind).get(self.item_id)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._item is not None
+
+    @property
+    def is_on(self) -> bool:
+        return bool((self._item or {}).get("enabled"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return dns_attributes(self._item or {}, self.kind, self.coordinator.data.groups)
+
+    async def _set(self, enabled: bool) -> None:
+        item = self._item
+        if item is None:
+            raise HomeAssistantError("NetBird: DNS entry no longer exists")
+        client = self.coordinator.client
+        call = (
+            client.set_nameserver_group_enabled(item, enabled)
+            if self.kind == "nameserver"
+            else client.set_zone_enabled(item, enabled)
+        )
+        await _call(self.coordinator, call)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._set(True)

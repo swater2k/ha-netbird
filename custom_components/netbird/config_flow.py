@@ -35,6 +35,7 @@ from .api import (
     normalize_url,
 )
 from .const import (
+    CONF_ACCESSIBLE_PEERS,
     CONF_AUDIT_EVENTS,
     CONF_SCAN_INTERVAL,
     CONF_TOKEN,
@@ -165,6 +166,7 @@ class NetBirdOptionsFlow(OptionsFlowWithReload):
                 CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL]),
                 CONF_TOKEN_WARNING_DAYS: int(user_input[CONF_TOKEN_WARNING_DAYS]),
                 CONF_AUDIT_EVENTS: bool(user_input.get(CONF_AUDIT_EVENTS, True)),
+                CONF_ACCESSIBLE_PEERS: bool(user_input.get(CONF_ACCESSIBLE_PEERS, False)),
             }
             for option in CONTROL_OPTIONS:
                 data[option] = bool(user_input.get(option, False))
@@ -193,6 +195,9 @@ class NetBirdOptionsFlow(OptionsFlowWithReload):
             ),
             vol.Optional(
                 CONF_AUDIT_EVENTS, default=opts.get(CONF_AUDIT_EVENTS, True)
+            ): BooleanSelector(),
+            vol.Optional(
+                CONF_ACCESSIBLE_PEERS, default=opts.get(CONF_ACCESSIBLE_PEERS, False)
             ): BooleanSelector(),
         }
         for option in CONTROL_OPTIONS:

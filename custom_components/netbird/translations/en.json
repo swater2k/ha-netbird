@@ -65,6 +65,8 @@
           "control_peers": "Control: peer management",
           "control_users": "Control: user management",
           "control_groups": "Control: group membership",
+          "control_dns": "Control: DNS",
+          "accessible_peers": "Accessible peers per peer",
           "control_setup_keys": "Control: setup keys"
         },
         "data_description": {
@@ -76,6 +78,8 @@
           "control_peers": "Allows the actions approve peer, set login expiration and delete peer.",
           "control_users": "Allows the actions approve, reject and block user.",
           "control_groups": "Allows the actions add and remove a peer from a group.",
+          "control_dns": "Adds switches for nameserver groups and DNS zones and allows the actions set and delete DNS record.",
+          "accessible_peers": "Adds a sensor per peer with the number of peers it may reach. Costs one extra request per peer and poll.",
           "control_setup_keys": "Allows the actions create and revoke setup key."
         }
       }
@@ -94,6 +98,15 @@
       },
       "routing_peer_online": {
         "name": "Routing peer online"
+      },
+      "nameserver": {
+        "name": "Nameserver {name}"
+      },
+      "zone": {
+        "name": "DNS zone {name}"
+      },
+      "service": {
+        "name": "Reverse proxy {name}"
       }
     },
     "sensor": {
@@ -156,6 +169,23 @@
       },
       "network_resources": {
         "name": "Resources"
+      },
+      "zone_records": {
+        "name": "DNS zone {name} records"
+      },
+      "service_status": {
+        "name": "Reverse proxy {name} status",
+        "state": {
+          "pending": "Pending",
+          "active": "Active",
+          "tunnel_not_created": "Tunnel not created",
+          "certificate_pending": "Certificate pending",
+          "certificate_failed": "Certificate failed",
+          "error": "Error"
+        }
+      },
+      "accessible_peers": {
+        "name": "Accessible peers"
       }
     },
     "switch": {
@@ -167,6 +197,12 @@
       },
       "router": {
         "name": "Routing peer {name}"
+      },
+      "nameserver": {
+        "name": "Nameserver {name}"
+      },
+      "zone": {
+        "name": "DNS zone {name}"
       }
     },
     "update": {
@@ -209,6 +245,12 @@
     },
     "permission_denied": {
       "message": "The service user lacks permission for this action (role admin required)."
+    },
+    "zone_not_found": {
+      "message": "DNS zone {zone} not found."
+    },
+    "record_not_found": {
+      "message": "No DNS record {name} found."
     },
     "cannot_block_self": {
       "message": "The service user used by this integration cannot block itself."
@@ -354,6 +396,58 @@
         "ephemeral": {
           "name": "Ephemeral",
           "description": "Peers are removed automatically after being offline for a while."
+        }
+      }
+    },
+    "set_dns_record": {
+      "name": "Set DNS record",
+      "description": "Creates a record in a NetBird DNS zone or updates the one with the same name and type.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird server",
+          "description": "Only needed if several servers are configured."
+        },
+        "zone": {
+          "name": "Zone",
+          "description": "Name, domain or ID of the zone."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Host name; the zone domain is appended if missing."
+        },
+        "type": {
+          "name": "Type",
+          "description": "A, AAAA or CNAME."
+        },
+        "content": {
+          "name": "Content",
+          "description": "IP address or target name."
+        },
+        "ttl": {
+          "name": "TTL",
+          "description": "Time to live in seconds."
+        }
+      }
+    },
+    "delete_dns_record": {
+      "name": "Delete DNS record",
+      "description": "Deletes records with this name from a NetBird DNS zone.",
+      "fields": {
+        "config_entry_id": {
+          "name": "NetBird server",
+          "description": "Only needed if several servers are configured."
+        },
+        "zone": {
+          "name": "Zone",
+          "description": "Name, domain or ID of the zone."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Host name; the zone domain is appended if missing."
+        },
+        "type": {
+          "name": "Type",
+          "description": "Only delete records of this type; empty deletes all types."
         }
       }
     },

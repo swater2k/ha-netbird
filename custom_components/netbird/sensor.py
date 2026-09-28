@@ -18,7 +18,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import NetBirdConfigEntry
-from .const import CONF_AUDIT_EVENTS, FEATURE_AUDIT
+from .const import CONF_ACCESSIBLE_PEERS, CONF_AUDIT_EVENTS, FEATURE_AUDIT
 from .coordinator import NetBirdCoordinator, NetBirdData, parse_time
 from .entity import NetBirdEntity, NetBirdNetworkEntity, NetBirdPeerEntity, track_items
 
@@ -149,6 +149,28 @@ async def async_setup_entry(
         lambda d: d.networks.keys(),
         lambda network_id: [NetworkResourcesSensor(coordinator, entry, network_id)],
     )
+    track_items(
+        coordinator,
+        entry,
+        async_add_entities,
+        lambda d: d.zones.keys(),
+        lambda zone_id: [ZoneRecordsSensor(coordinator, entry, zone_id)],
+    )
+    track_items(
+        coordinator,
+        entry,
+        async_add_entities,
+        lambda d: d.services.keys(),
+        lambda service_id: [ServiceStatusSensor(coordinator, entry, service_id)],
+    )
+    if entry.options.get(CONF_ACCESSIBLE_PEERS, False):
+        track_items(
+            coordinator,
+            entry,
+            async_add_entities,
+            lambda d: d.peers.keys(),
+            lambda peer_id: [AccessiblePeersSensor(coordinator, entry, peer_id)],
+        )
 
 
 class ServerSensor(NetBirdEntity, SensorEntity):
@@ -400,3 +422,103 @@ class NetworkResourcesSensor(NetBirdNetworkEntity, SensorEntity):
                 for r in network.resources
             ]
         }
+
+
+class ZoneRecordsSensor(NetBirdEntity, SensorEntity):
+    """Anzahl der Einträge einer eigenen DNS-Zone."""
+
+    _attr_translation_key = "zone_records"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self, coordinator: NetBirdCoordinator, entry: NetBirdConfigEntry, zone_id: str
+    ) -> None:
+        super().__init__(coordinator, entry, f"zone_{zone_id}_records")
+        self.zone_id = zone_id
+        zone = coordinator.data.zones.get(zone_id, {})
+        self._attr_translation_placeholders = {"name": zone.get("name") or zone_id}
+
+    @property
+    def _zone(self) -> dict[str, Any]:
+        return self.coordinator.data.zones.get(self.zone_id, {})
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.zone_id in self.coordinator.data.zones
+
+    @property
+    def native_value(self) -> int:
+        return len(self._zone.get("records") or [])
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        zone = self._zone
+        return {
+            "domain": zone.get("domain"),
+            "records": [
+                {"name": r.get("name"), "type": r.get("type"), "content": r.get("content")}
+                for r in zone.get("records") or []
+            ],
+        }
+
+
+SERVICE_STATES = [
+    "pending",
+    "active",
+    "tunnel_not_created",
+    "certificate_pending",
+    "certificate_failed",
+    "error",
+]
+
+
+class ServiceStatusSensor(NetBirdEntity, SensorEntity):
+    """Status eines Dienstes des NetBird-Reverse-Proxys."""
+
+    _attr_translation_key = "service_status"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = SERVICE_STATES
+
+    def __init__(
+        self, coordinator: NetBirdCoordinator, entry: NetBirdConfigEntry, service_id: str
+    ) -> None:
+        super().__init__(coordinator, entry, f"service_{service_id}_status")
+        self.service_id = service_id
+        service = coordinator.data.services.get(service_id, {})
+        self._attr_translation_placeholders = {"name": service.get("name") or service_id}
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.service_id in self.coordinator.data.services
+
+    @property
+    def native_value(self) -> str | None:
+        meta = self.coordinator.data.services.get(self.service_id, {}).get("meta") or {}
+        status = meta.get("status")
+        return status if status in SERVICE_STATES else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        service = self.coordinator.data.services.get(self.service_id, {})
+        meta = service.get("meta") or {}
+        return {
+            "domain": service.get("domain"),
+            "certificate_issued_at": meta.get("certificate_issued_at"),
+        }
+
+
+class AccessiblePeersSensor(NetBirdPeerEntity, SensorEntity):
+    """Wie viele Peers dieser Peer laut Policies erreichen darf."""
+
+    _attr_translation_key = "accessible_peers"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self, coordinator: NetBirdCoordinator, entry: NetBirdConfigEntry, peer_id: str
+    ) -> None:
+        super().__init__(coordinator, entry, peer_id, "accessible_peers")
+
+    @property
+    def native_value(self) -> int | None:
+        return self.coordinator.data.accessible_peers.get(self.peer_id)

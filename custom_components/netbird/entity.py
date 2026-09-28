@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import NetBirdCoordinator, NetBirdData, network_device_id, peer_device_id
+from .stable_id import StableEntityIdMixin
 
 if TYPE_CHECKING:
     from . import NetBirdConfigEntry
@@ -46,7 +47,7 @@ def server_device(entry: NetBirdConfigEntry, data: NetBirdData | None) -> Device
     )
 
 
-class NetBirdEntity(CoordinatorEntity[NetBirdCoordinator]):
+class NetBirdEntity(StableEntityIdMixin, CoordinatorEntity[NetBirdCoordinator]):
     """Entität am Server-Gerät."""
 
     _attr_has_entity_name = True
@@ -57,10 +58,11 @@ class NetBirdEntity(CoordinatorEntity[NetBirdCoordinator]):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_{key}"
+        self._id_prefix = DOMAIN
         self._attr_device_info = server_device(entry, coordinator.data)
 
 
-class NetBirdPeerEntity(CoordinatorEntity[NetBirdCoordinator]):
+class NetBirdPeerEntity(StableEntityIdMixin, CoordinatorEntity[NetBirdCoordinator]):
     """Entität an einem Peer-Gerät."""
 
     _attr_has_entity_name = True
@@ -73,6 +75,7 @@ class NetBirdPeerEntity(CoordinatorEntity[NetBirdCoordinator]):
         self.peer_id = peer_id
         self._attr_unique_id = f"{entry.entry_id}_peer_{peer_id}_{key}"
         peer = coordinator.data.peers.get(peer_id, {})
+        self._id_prefix = peer.get("name") or peer.get("hostname") or peer_id
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, peer_device_id(entry.entry_id, peer_id))},
             name=peer.get("name") or peer.get("hostname") or peer_id,
@@ -91,7 +94,7 @@ class NetBirdPeerEntity(CoordinatorEntity[NetBirdCoordinator]):
         return super().available and self.peer_id in self.coordinator.data.peers
 
 
-class NetBirdNetworkEntity(CoordinatorEntity[NetBirdCoordinator]):
+class NetBirdNetworkEntity(StableEntityIdMixin, CoordinatorEntity[NetBirdCoordinator]):
     """Entität an einem Netzwerk-Gerät."""
 
     _attr_has_entity_name = True
@@ -108,6 +111,7 @@ class NetBirdNetworkEntity(CoordinatorEntity[NetBirdCoordinator]):
         self.network_id = network_id
         self._attr_unique_id = f"{entry.entry_id}_network_{network_id}_{key}"
         network = coordinator.data.networks[network_id].network
+        self._id_prefix = f"{DOMAIN} {network.get('name') or network_id}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, network_device_id(entry.entry_id, network_id))},
             name=f"NetBird {network.get('name') or network_id}",

@@ -24,6 +24,7 @@ from .api import (
     NetBirdPermissionError,
 )
 from .const import (
+    CONF_ACCESSIBLE_PEERS,
     CONF_AUDIT_EVENTS,
     CONF_TOKEN_WARNING_DAYS,
     CONTROL_MODULES,
@@ -32,11 +33,15 @@ from .const import (
     EVENT_AUDIT,
     EVENT_PEER_ADDED,
     EVENT_PEER_REMOVED,
+    FEATURE_ACCESSIBLE_PEERS,
     FEATURE_AUDIT,
+    FEATURE_NAMESERVERS,
     FEATURE_NETWORKS,
+    FEATURE_REVERSE_PROXY,
     FEATURE_SETUP_KEYS,
     FEATURE_TOKENS,
     FEATURE_VERSION,
+    FEATURE_ZONES,
     ISSUE_MISSING_PERMISSIONS,
     ISSUE_TOKEN_EXPIRING,
 )
@@ -44,6 +49,15 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+
+def control_modules() -> list[str]:
+    """Alle Rechtemodule, die eine Steuerfunktion braucht, flach."""
+    result: list[str] = []
+    for modules in CONTROL_MODULES.values():
+        result.extend([modules] if isinstance(modules, str) else modules)
+    return result
+
 
 FULL_ACCESS_ROLES = frozenset({"owner", "admin"})
 READ_ONLY_ROLES = frozenset({"auditor", "user", "usage_viewer", "billing_admin"})
@@ -95,6 +109,10 @@ class NetBirdData:
     setup_keys: dict[str, dict[str, Any]] | None = None
     tokens: list[dict[str, Any]] | None = None
     last_audit_event: dict[str, Any] | None = None
+    nameservers: dict[str, dict[str, Any]] = field(default_factory=dict)
+    zones: dict[str, dict[str, Any]] = field(default_factory=dict)
+    services: dict[str, dict[str, Any]] = field(default_factory=dict)
+    accessible_peers: dict[str, int] = field(default_factory=dict)
     fetched_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
@@ -113,7 +131,7 @@ class NetBirdData:
             return {}
         return {
             module: {"read": True, "create": allowed, "update": allowed, "delete": allowed}
-            for module in CONTROL_MODULES.values()
+            for module in control_modules()
         }
 
     @property
@@ -228,6 +246,14 @@ class NetBirdCoordinator(DataUpdateCoordinator[NetBirdData]):
                 tokens = await self._optional(
                     FEATURE_TOKENS, self.client.tokens(current_user["id"])
                 )
+            nameservers, zones, services = await asyncio.gather(
+                self._optional(FEATURE_NAMESERVERS, self.client.nameserver_groups()),
+                self._optional(FEATURE_ZONES, self.client.dns_zones()),
+                self._optional(FEATURE_REVERSE_PROXY, self.client.reverse_proxy_services()),
+            )
+            accessible: dict[str, int] = {}
+            if self.config_entry.options.get(CONF_ACCESSIBLE_PEERS, False):
+                accessible = await self._fetch_accessible([p["id"] for p in peers if p.get("id")])
             audit = None
             if self.config_entry.options.get(CONF_AUDIT_EVENTS, True):
                 audit = await self._optional(FEATURE_AUDIT, self.client.audit_events())
@@ -248,6 +274,10 @@ class NetBirdCoordinator(DataUpdateCoordinator[NetBirdData]):
             if setup_keys is not None
             else None,
             tokens=tokens,
+            nameservers={g["id"]: g for g in nameservers or [] if g.get("id")},
+            zones={z["id"]: z for z in zones or [] if z.get("id")},
+            services={v["id"]: v for v in services or [] if v.get("id")},
+            accessible_peers=accessible,
         )
         self._process_peers(data)
         self._process_networks(data)
@@ -256,6 +286,22 @@ class NetBirdCoordinator(DataUpdateCoordinator[NetBirdData]):
         data.last_audit_event = self._last_audit
         self._update_issues(data)
         return data
+
+    async def _fetch_accessible(self, peer_ids: list[str]) -> dict[str, int]:
+        """Anzahl erreichbarer Peers je Peer – eine Anfrage pro Peer."""
+        if FEATURE_ACCESSIBLE_PEERS in self.unsupported:
+            return {}
+        result: dict[str, int] = {}
+        for peer_id in peer_ids:
+            peers = await self._optional(
+                FEATURE_ACCESSIBLE_PEERS, self.client.accessible_peers(peer_id)
+            )
+            if peers is None:
+                if FEATURE_ACCESSIBLE_PEERS in self.unsupported:
+                    return {}
+                continue
+            result[peer_id] = len(peers)
+        return result
 
     async def _fetch_networks(self) -> dict[str, NetworkData]:
         networks = await self.client.networks()
@@ -363,13 +409,15 @@ class NetBirdCoordinator(DataUpdateCoordinator[NetBirdData]):
 
         perm_issue = f"{ISSUE_MISSING_PERMISSIONS}_{entry.entry_id}"
         modules = data.permissions
-        missing = sorted(
-            module
-            for option, module in CONTROL_MODULES.items()
-            if entry.options.get(option, False)
-            and modules
-            and not (modules.get(module) or {}).get("update", False)
-        )
+        missing: list[str] = []
+        if modules:
+            for option, needed in CONTROL_MODULES.items():
+                if not entry.options.get(option, False):
+                    continue
+                for module in [needed] if isinstance(needed, str) else needed:
+                    if not (modules.get(module) or {}).get("update", False):
+                        missing.append(module)
+        missing = sorted(set(missing))
         if missing:
             ir.async_create_issue(
                 self.hass,

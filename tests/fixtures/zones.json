@@ -1,0 +1,28 @@
+[
+  {
+    "id": "z-1",
+    "name": "Intern",
+    "domain": "home.internal",
+    "enabled": true,
+    "enable_search_domain": false,
+    "distribution_groups": [
+      "g-dev"
+    ],
+    "records": [
+      {
+        "id": "r-1",
+        "name": "nas.home.internal",
+        "type": "A",
+        "content": "192.0.2.20",
+        "ttl": 300
+      },
+      {
+        "id": "r-2",
+        "name": "wiki.home.internal",
+        "type": "CNAME",
+        "content": "nas.home.internal",
+        "ttl": 300
+      }
+    ]
+  }
+]

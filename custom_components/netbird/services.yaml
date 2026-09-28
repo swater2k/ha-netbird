@@ -143,3 +143,66 @@ revoke_setup_key:
       example: "laptop-onboarding"
       selector:
         text:
+
+set_dns_record:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: netbird
+    zone:
+      required: true
+      example: "home.internal"
+      selector:
+        text:
+    name:
+      required: true
+      example: "nas"
+      selector:
+        text:
+    type:
+      required: true
+      default: "A"
+      selector:
+        select:
+          options:
+            - "A"
+            - "AAAA"
+            - "CNAME"
+    content:
+      required: true
+      example: "192.168.1.20"
+      selector:
+        text:
+    ttl:
+      default: 300
+      selector:
+        number:
+          min: 60
+          max: 86400
+          mode: box
+          unit_of_measurement: s
+
+delete_dns_record:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: netbird
+    zone:
+      required: true
+      example: "home.internal"
+      selector:
+        text:
+    name:
+      required: true
+      example: "nas"
+      selector:
+        text:
+    type:
+      selector:
+        select:
+          options:
+            - "A"
+            - "AAAA"
+            - "CNAME"

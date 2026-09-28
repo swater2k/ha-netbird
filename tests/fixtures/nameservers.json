@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ns-1",
+    "name": "AdGuard Heimnetz",
+    "description": "",
+    "nameservers": [
+      {
+        "ip": "192.0.2.84",
+        "ns_type": "udp",
+        "port": 53
+      }
+    ],
+    "enabled": true,
+    "groups": [
+      "g-all"
+    ],
+    "primary": false,
+    "domains": [
+      "example.com",
+      "example.net"
+    ],
+    "search_domains_enabled": false
+  }
+]

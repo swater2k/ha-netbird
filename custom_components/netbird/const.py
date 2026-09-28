@@ -18,6 +18,9 @@ CONF_CONTROL_PEERS: Final = "control_peers"
 CONF_CONTROL_USERS: Final = "control_users"
 CONF_CONTROL_GROUPS: Final = "control_groups"
 CONF_CONTROL_SETUP_KEYS: Final = "control_setup_keys"
+CONF_CONTROL_DNS: Final = "control_dns"
+# Kein Steuer-, sondern ein Leseschalter: je Peer eine zusätzliche Anfrage.
+CONF_ACCESSIBLE_PEERS: Final = "accessible_peers"
 
 CONTROL_OPTIONS: Final = (
     CONF_CONTROL_POLICIES,
@@ -26,16 +29,18 @@ CONTROL_OPTIONS: Final = (
     CONF_CONTROL_USERS,
     CONF_CONTROL_GROUPS,
     CONF_CONTROL_SETUP_KEYS,
+    CONF_CONTROL_DNS,
 )
 
 # Welches NetBird-Rechtemodul eine Steuerfunktion braucht.
-CONTROL_MODULES: Final = {
+CONTROL_MODULES: Final[dict[str, str | tuple[str, ...]]] = {
     CONF_CONTROL_POLICIES: "policies",
     CONF_CONTROL_NETWORKS: "networks",
     CONF_CONTROL_PEERS: "peers",
     CONF_CONTROL_USERS: "users",
     CONF_CONTROL_GROUPS: "groups",
     CONF_CONTROL_SETUP_KEYS: "setup_keys",
+    CONF_CONTROL_DNS: ("nameservers", "dns"),
 }
 
 DEFAULT_SCAN_INTERVAL: Final = 60
@@ -57,3 +62,7 @@ FEATURE_AUDIT: Final = "audit"
 FEATURE_SETUP_KEYS: Final = "setup_keys"
 FEATURE_TOKENS: Final = "tokens"
 FEATURE_NETWORKS: Final = "networks"
+FEATURE_NAMESERVERS: Final = "nameservers"
+FEATURE_ZONES: Final = "zones"
+FEATURE_REVERSE_PROXY: Final = "reverse_proxy"
+FEATURE_ACCESSIBLE_PEERS: Final = "accessible_peers"

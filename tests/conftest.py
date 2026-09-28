@@ -40,6 +40,11 @@ ENDPOINTS = {
     "/setup-keys": "setup_keys",
     "/users/u-svc/tokens": "tokens",
     "/events/audit": "audit",
+    "/dns/nameservers": "nameservers",
+    "/dns/zones": "zones",
+    "/reverse-proxies/services": "services",
+    "/peers/p-router/accessible-peers": "accessible_router",
+    "/peers/p-phone/accessible-peers": "accessible_phone",
 }
 
 

@@ -13,6 +13,7 @@ import voluptuous as vol
 
 from .api import NetBirdError, NetBirdPermissionError
 from .const import (
+    CONF_CONTROL_DNS,
     CONF_CONTROL_GROUPS,
     CONF_CONTROL_PEERS,
     CONF_CONTROL_SETUP_KEYS,
@@ -57,6 +58,30 @@ CREATE_KEY_SCHEMA = vol.Schema(
     }
 )
 REVOKE_KEY_SCHEMA = vol.Schema({**ENTRY_FIELD, vol.Required(ATTR_NAME): cv.string})
+
+ATTR_ZONE = "zone"
+ATTR_TYPE = "type"
+ATTR_CONTENT = "content"
+ATTR_TTL = "ttl"
+RECORD_TYPES = ("A", "AAAA", "CNAME")
+DNS_RECORD_SCHEMA = vol.Schema(
+    {
+        **ENTRY_FIELD,
+        vol.Required(ATTR_ZONE): cv.string,
+        vol.Required(ATTR_NAME): cv.string,
+        vol.Required(ATTR_TYPE): vol.All(vol.Upper, vol.In(RECORD_TYPES)),
+        vol.Required(ATTR_CONTENT): cv.string,
+        vol.Optional(ATTR_TTL, default=300): vol.All(vol.Coerce(int), vol.Range(min=60)),
+    }
+)
+DELETE_RECORD_SCHEMA = vol.Schema(
+    {
+        **ENTRY_FIELD,
+        vol.Required(ATTR_ZONE): cv.string,
+        vol.Required(ATTR_NAME): cv.string,
+        vol.Optional(ATTR_TYPE): vol.All(vol.Upper, vol.In(RECORD_TYPES)),
+    }
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -134,6 +159,31 @@ def _find_group(coordinator: NetBirdCoordinator, value: str) -> dict[str, Any]:
         translation_key="group_not_found",
         translation_placeholders={"group": value},
     )
+
+
+def _find_zone(coordinator: NetBirdCoordinator, value: str) -> dict[str, Any]:
+    needle = value.strip().lower().rstrip(".")
+    for zone in coordinator.data.zones.values():
+        if needle in (
+            (zone.get("id") or "").lower(),
+            (zone.get("name") or "").lower(),
+            (zone.get("domain") or "").lower().rstrip("."),
+        ):
+            return zone
+    raise ServiceValidationError(
+        translation_domain=DOMAIN,
+        translation_key="zone_not_found",
+        translation_placeholders={"zone": value},
+    )
+
+
+def _record_name(zone: dict[str, Any], name: str) -> str:
+    """``nas`` → ``nas.home.internal``; vollständige Namen bleiben, wie sie sind."""
+    name = name.strip().rstrip(".").lower()
+    domain = (zone.get("domain") or "").strip().rstrip(".").lower()
+    if not domain or name == domain or name.endswith(f".{domain}"):
+        return name
+    return f"{name}.{domain}"
 
 
 def _peer_ids(group: dict[str, Any]) -> list[str]:
@@ -241,7 +291,54 @@ def async_setup_services(hass: HomeAssistant) -> None:
             translation_placeholders={"name": call.data[ATTR_NAME]},
         )
 
+    async def set_dns_record(call: ServiceCall) -> None:
+        coordinator = _require(_entry_from_call(hass, call), CONF_CONTROL_DNS)
+        zone = _find_zone(coordinator, call.data[ATTR_ZONE])
+        name = _record_name(zone, call.data[ATTR_NAME])
+        record = {
+            "name": name,
+            "type": call.data[ATTR_TYPE],
+            "content": call.data[ATTR_CONTENT].strip(),
+            "ttl": call.data[ATTR_TTL],
+        }
+        existing = next(
+            (
+                r
+                for r in zone.get("records") or []
+                if (r.get("name") or "").lower().rstrip(".") == name
+                and r.get("type") == record["type"]
+            ),
+            None,
+        )
+        client = coordinator.client
+        if existing is None:
+            await _run(coordinator, client.create_dns_record(zone["id"], record))
+        else:
+            await _run(coordinator, client.update_dns_record(zone["id"], existing["id"], record))
+
+    async def delete_dns_record(call: ServiceCall) -> None:
+        coordinator = _require(_entry_from_call(hass, call), CONF_CONTROL_DNS)
+        zone = _find_zone(coordinator, call.data[ATTR_ZONE])
+        name = _record_name(zone, call.data[ATTR_NAME])
+        record_type = call.data.get(ATTR_TYPE)
+        matches = [
+            r
+            for r in zone.get("records") or []
+            if (r.get("name") or "").lower().rstrip(".") == name
+            and (record_type is None or r.get("type") == record_type)
+        ]
+        if not matches:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="record_not_found",
+                translation_placeholders={"name": name},
+            )
+        for record in matches:
+            await _run(coordinator, coordinator.client.delete_dns_record(zone["id"], record["id"]))
+
     register = hass.services.async_register
+    register(DOMAIN, "set_dns_record", set_dns_record, schema=DNS_RECORD_SCHEMA)
+    register(DOMAIN, "delete_dns_record", delete_dns_record, schema=DELETE_RECORD_SCHEMA)
     register(DOMAIN, "approve_peer", approve_peer, schema=PEER_SCHEMA)
     register(DOMAIN, "set_login_expiration", set_login_expiration, schema=PEER_TOGGLE_SCHEMA)
     register(DOMAIN, "delete_peer", delete_peer, schema=PEER_SCHEMA)

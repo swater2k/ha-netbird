@@ -8,7 +8,7 @@ import json
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr, issue_registry as ir
+from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 from homeassistant.util import dt as dt_util
 import pytest
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
@@ -387,3 +387,171 @@ async def test_older_server(hass: HomeAssistant, config_entry, aioclient_mock) -
     assert hass.states.get("binary_sensor.s25_connected") is not None
     assert hass.states.get("binary_sensor.s25_approval_required") is None
     assert hass.states.get("sensor.netbird_token_expiration") is None
+
+
+@pytest.mark.parametrize("options", [{"control_policies": True}])
+async def test_entity_ids_ignore_area(hass: HomeAssistant, config_entry, aioclient_mock) -> None:
+    """Neue Entitäten bekommen kein Bereichs-Präfix, auch wenn das Gerät einen Bereich hat."""
+    from homeassistant.helpers import area_registry as ar
+
+    mock_api(aioclient_mock)
+    await _setup(hass, config_entry)
+    area = ar.async_get(hass).async_create("Waschraum")
+    devices = dr.async_get(hass)
+    server = find_device(devices, config_entry.entry_id, config_entry.entry_id)
+    devices.async_update_device(server.id, area_id=area.id)
+    router = find_device(devices, f"{config_entry.entry_id}_peer_p-router", config_entry.entry_id)
+    devices.async_update_device(router.id, area_id=area.id)
+
+    policies = load("policies")
+    policies.append(dict(policies[1], id="pol-new", name="Gaeste"))
+    peers = load("peers")
+    peers.append(dict(peers[1], id="p-new", name="tablet", hostname="tablet"))
+    mock_api(aioclient_mock, {"/policies": policies, "/peers": peers})
+    await _refresh(hass, config_entry)
+
+    assert hass.states.get("switch.netbird_policy_gaeste") is not None
+    assert hass.states.get("binary_sensor.tablet_connected") is not None
+    assert not [e for e in hass.states.async_entity_ids() if "waschraum" in e]
+
+
+# --------------------------------------------------------------------------- #
+# 0.2: DNS, Reverse Proxy, erreichbare Peers                                    #
+# --------------------------------------------------------------------------- #
+
+
+async def test_dns_and_reverse_proxy_entities(
+    hass: HomeAssistant, config_entry, aioclient_mock
+) -> None:
+    mock_api(aioclient_mock)
+    await _setup(hass, config_entry)
+
+    nameserver = hass.states.get("binary_sensor.netbird_nameserver_adguard_heimnetz")
+    assert nameserver.state == "on"
+    assert nameserver.attributes["nameservers"] == ["192.0.2.84:53"]
+    assert nameserver.attributes["groups"] == ["All"]
+    assert hass.states.get("binary_sensor.netbird_dns_zone_intern").state == "on"
+    records = hass.states.get("sensor.netbird_dns_zone_intern_records")
+    assert records.state == "2"
+    assert records.attributes["records"][0]["name"] == "nas.home.internal"
+    assert hass.states.get("sensor.netbird_reverse_proxy_wiki_status").state == "active"
+    assert hass.states.get("binary_sensor.netbird_reverse_proxy_wiki").state == "on"
+    # ohne Option keine Anfragen je Peer
+    assert not [c for c in _calls(aioclient_mock, "GET") if "accessible-peers" in c[0]]
+    assert hass.states.get("sensor.netbird_router_accessible_peers") is None
+
+
+async def test_older_server_without_dns_zones(
+    hass: HomeAssistant, config_entry, aioclient_mock
+) -> None:
+    mock_api(aioclient_mock, status={"/dns/zones": 404, "/reverse-proxies/services": 404})
+    await _setup(hass, config_entry)
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert hass.states.get("sensor.netbird_dns_zone_intern_records") is None
+    assert hass.states.get("binary_sensor.netbird_nameserver_adguard_heimnetz") is not None
+
+
+@pytest.mark.parametrize("options", [{"accessible_peers": True}])
+async def test_accessible_peers(hass: HomeAssistant, config_entry, aioclient_mock) -> None:
+    mock_api(aioclient_mock)
+    await _setup(hass, config_entry)
+    assert hass.states.get("sensor.netbird_router_accessible_peers").state == "1"
+    assert hass.states.get("sensor.s25_accessible_peers").state == "1"
+
+
+@pytest.mark.parametrize("options", [{"control_dns": True}])
+async def test_dns_control(hass: HomeAssistant, config_entry, aioclient_mock) -> None:
+    mock_api(aioclient_mock)
+    await _setup(hass, config_entry)
+    ns_switch = "switch.netbird_nameserver_adguard_heimnetz"
+    assert hass.states.get(ns_switch).state == "on"
+    assert hass.states.get("switch.netbird_dns_zone_intern").state == "on"
+    assert hass.states.get("binary_sensor.netbird_nameserver_adguard_heimnetz") is None
+
+    mock_api(aioclient_mock)
+    aioclient_mock.put(f"{API}/dns/nameservers/ns-1", json={})
+    aioclient_mock.put(f"{API}/dns/zones/z-1/records/r-1", json={})
+    aioclient_mock.post(f"{API}/dns/zones/z-1/records", json={})
+    aioclient_mock.delete(f"{API}/dns/zones/z-1/records/r-2", status=200)
+    await hass.services.async_call("switch", "turn_off", {"entity_id": ns_switch}, blocking=True)
+    # vorhandenen Eintrag aktualisieren (Kurzname wird ergänzt) …
+    await hass.services.async_call(
+        DOMAIN,
+        "set_dns_record",
+        {"zone": "home.internal", "name": "nas", "type": "a", "content": "192.0.2.21"},
+        blocking=True,
+    )
+    # … und einen neuen anlegen
+    await hass.services.async_call(
+        DOMAIN,
+        "set_dns_record",
+        {"zone": "Intern", "name": "cam.home.internal", "type": "A", "content": "192.0.2.30"},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        DOMAIN, "delete_dns_record", {"zone": "z-1", "name": "wiki"}, blocking=True
+    )
+
+    puts = dict(_calls(aioclient_mock, "PUT"))
+    ns = puts[f"{API}/dns/nameservers/ns-1"]
+    assert ns["enabled"] is False
+    assert ns["groups"] == ["g-all"]
+    assert ns["domains"] == ["example.com", "example.net"]
+    assert puts[f"{API}/dns/zones/z-1/records/r-1"] == {
+        "name": "nas.home.internal",
+        "type": "A",
+        "content": "192.0.2.21",
+        "ttl": 300,
+    }
+    ((_, created),) = [c for c in _calls(aioclient_mock, "POST") if c[0].endswith("/records")]
+    assert created["name"] == "cam.home.internal"
+    assert [m for m, url, *_ in aioclient_mock.mock_calls if m.upper() == "DELETE"]
+
+
+async def test_dns_actions_need_option(hass: HomeAssistant, config_entry, aioclient_mock) -> None:
+    mock_api(aioclient_mock)
+    await _setup(hass, config_entry)
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN,
+            "set_dns_record",
+            {"zone": "Intern", "name": "nas", "type": "A", "content": "192.0.2.21"},
+            blocking=True,
+        )
+
+
+async def test_option_change_removes_replaced_entities(
+    hass: HomeAssistant, config_entry, aioclient_mock
+) -> None:
+    mock_api(aioclient_mock)
+    await _setup(hass, config_entry)
+    registry = er.async_get(hass)
+    assert registry.async_get("binary_sensor.netbird_dns_zone_intern")
+
+    hass.config_entries.async_update_entry(
+        config_entry, options={"control_dns": True, "control_policies": True}
+    )
+    await hass.config_entries.async_reload(config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert registry.async_get("binary_sensor.netbird_dns_zone_intern") is None
+    assert registry.async_get("switch.netbird_dns_zone_intern")
+    assert registry.async_get("switch.netbird_policy_default")
+
+    hass.config_entries.async_update_entry(config_entry, options={})
+    await hass.config_entries.async_reload(config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert registry.async_get("switch.netbird_dns_zone_intern") is None
+    assert registry.async_get("switch.netbird_policy_default") is None
+    assert registry.async_get("binary_sensor.netbird_dns_zone_intern")
+
+
+@pytest.mark.parametrize("options", [{"control_dns": True}])
+async def test_dns_permissions_issue(hass: HomeAssistant, config_entry, aioclient_mock) -> None:
+    users = load("users")
+    users[2]["role"] = "auditor"
+    mock_api(aioclient_mock, {"/users": users})
+    await _setup(hass, config_entry)
+    issue = ir.async_get(hass).async_get_issue(
+        DOMAIN, f"missing_permissions_{config_entry.entry_id}"
+    )
+    assert issue.translation_placeholders["modules"] == "dns, nameservers"

@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import (
     config_validation as cv,
     device_registry as dr,
+    entity_registry as er,
     issue_registry as ir,
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -17,6 +18,10 @@ from homeassistant.helpers.typing import ConfigType
 
 from .api import NetBirdClient
 from .const import (
+    CONF_ACCESSIBLE_PEERS,
+    CONF_CONTROL_DNS,
+    CONF_CONTROL_NETWORKS,
+    CONF_CONTROL_POLICIES,
     CONF_SCAN_INTERVAL,
     CONF_TOKEN,
     DEFAULT_SCAN_INTERVAL,
@@ -78,6 +83,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NetBirdConfigEntry) -> b
         entry_type=dr.DeviceEntryType.SERVICE,
     )
     entry.runtime_data = NetBirdRuntimeData(coordinator, server.id)
+    _remove_replaced_entities(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
@@ -106,6 +112,39 @@ async def async_remove_config_entry_device(
             if identifier.endswith(f"_network_{network_id}"):
                 return False
     return True
+
+
+def _replaced_by_option(entity: er.RegistryEntry, entry_id: str) -> str | None:
+    """Welche Option über diese Entität entscheidet – und in welche Richtung.
+
+    ``"+option"``: existiert nur bei aktiver Option (Schalter, Zusatzsensor).
+    ``"-option"``: wird bei aktiver Option durch einen Schalter ersetzt.
+    """
+    uid = entity.unique_id.removeprefix(f"{entry_id}_")
+    if entity.domain == "switch":
+        if uid.startswith("policy_"):
+            return f"+{CONF_CONTROL_POLICIES}"
+        if uid.startswith("network_"):
+            return f"+{CONF_CONTROL_NETWORKS}"
+        if uid.startswith(("nameserver_", "zone_")):
+            return f"+{CONF_CONTROL_DNS}"
+    if entity.domain == "binary_sensor" and uid.startswith(("nameserver_", "zone_")):
+        return f"-{CONF_CONTROL_DNS}"
+    if entity.domain == "sensor" and uid.startswith("peer_") and uid.endswith("_accessible_peers"):
+        return f"+{CONF_ACCESSIBLE_PEERS}"
+    return None
+
+
+def _remove_replaced_entities(hass: HomeAssistant, entry: NetBirdConfigEntry) -> None:
+    """Nach einer Optionsänderung verwaiste Entitäten entfernen."""
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        rule = _replaced_by_option(entity, entry.entry_id)
+        if rule is None:
+            continue
+        enabled = option_enabled(entry, rule[1:])
+        if (rule[0] == "+" and not enabled) or (rule[0] == "-" and enabled):
+            registry.async_remove(entity.entity_id)
 
 
 def option_enabled(entry: NetBirdConfigEntry, option: str) -> bool:
